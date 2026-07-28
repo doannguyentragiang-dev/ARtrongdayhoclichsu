@@ -30,7 +30,6 @@ this.el.sceneEl.addEventListener("twofingermove", this.handleScale);
 },
 handleRotation: function (event) {
 if (this.isVisible) {
-// Bắt trục X và Y để mô hình có thể xoay lật đa hướng
 this.el.object3D.rotation.y += event.detail.positionChange.x * this.data.rotationFactor;
 this.el.object3D.rotation.x += event.detail.positionChange.y * this.data.rotationFactor;
 }
@@ -144,12 +143,7 @@ a-assets, audio { display: none !important; }
 
 /* NÚT TƯƠNG TÁC */
 .ui-btn { position: fixed; width: 50px; height: 50px; background: white; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 24px; font-weight: bold; z-index: 1000; cursor: pointer; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-#info-btn { top: 20px; right: 20px; }
-#audio-btn { top: 80px; right: 20px; font-size: 20px;}
-
-/* MODAL THÔNG TIN */
-#info-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; justify-content: center; align-items: center; flex-direction: column; }
-#info-content { max-width: 95%; max-height: 85%; border-radius: 10px; border: 2px solid white; object-fit: contain; }
+#audio-btn { top: 20px; right: 20px; font-size: 20px;}
 
 .mindar-ui-overlay { display: none !important; }
 .mindar-ui-loading { display: none !important; }
@@ -171,13 +165,7 @@ a-assets, audio { display: none !important; }
     <button id="start-btn">SẴN SÀNG</button>
 </div>
 
-<div id="info-btn" class="ui-btn">i</div>
 <div id="audio-btn" class="ui-btn">🔊</div>
-
-<div id="info-modal">
-    <img id="info-content" src="" alt="Thông tin">
-    <div style="color:white; margin-top:10px">(Chạm để đóng)</div>
-</div>
 
 <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; filterMinCF:0.001; filterBeta: 10;"
 color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights"
@@ -191,22 +179,46 @@ gesture-detector>
 
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<!-- Hình ảnh 1 -> 8 (Index 0 -> 7) -->
-<a-entity id="t0" mindar-image-target="targetIndex: 0"><a-entity id="model-0" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<a-entity id="t1" mindar-image-target="targetIndex: 1"><a-entity id="model-1" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<a-entity id="t2" mindar-image-target="targetIndex: 2"><a-entity id="model-2" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<a-entity id="t3" mindar-image-target="targetIndex: 3"><a-entity id="model-3" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<a-entity id="t4" mindar-image-target="targetIndex: 4"><a-entity id="model-4" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<!-- Hình ảnh 1 -> 8 (Index 0 -> 7). Thẻ thông tin nằm ngay dưới mô hình (y = -1.2) -->
+<a-entity id="t0" mindar-image-target="targetIndex: 0">
+    <a-entity id="model-0" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-0" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+</a-entity>
+
+<a-entity id="t1" mindar-image-target="targetIndex: 1">
+    <a-entity id="model-1" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-1" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+</a-entity>
+
+<a-entity id="t2" mindar-image-target="targetIndex: 2">
+    <a-entity id="model-2" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-2" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+</a-entity>
+
+<a-entity id="t3" mindar-image-target="targetIndex: 3">
+    <a-entity id="model-3" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-3" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+</a-entity>
+
+<a-entity id="t4" mindar-image-target="targetIndex: 4">
+    <a-entity id="model-4" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-4" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+</a-entity>
 
 <a-entity id="t5" mindar-image-target="targetIndex: 5">
     <a-plane id="video-5" visible="false" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0"></a-plane>
+    <a-image id="info-5" rotation="0 0 0" position="0 -1.6 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
 <a-entity id="t6" mindar-image-target="targetIndex: 6">
     <a-plane id="video-6" visible="false" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0"></a-plane>
+    <a-image id="info-6" rotation="0 0 0" position="0 -1.6 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
-<a-entity id="t7" mindar-image-target="targetIndex: 7"><a-entity id="model-7" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<a-entity id="t7" mindar-image-target="targetIndex: 7">
+    <a-entity id="model-7" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-7" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+</a-entity>
 
 </a-scene>
 
@@ -242,12 +254,9 @@ if (sceneEl.hasLoaded) {
     sceneEl.addEventListener('loaded', finishLoading);
 }
 
-// --- LOGIC AR, NÚT BẤM, TẢI ĐỘNG MÔ HÌNH VÀ VIDEO ---
+// --- LOGIC AR, NÚT BẤM, TẢI ĐỘNG MÔ HÌNH, THẺ THÔNG TIN VÀ VIDEO ---
 const startScreen = document.getElementById('start-screen');
-const infoBtn = document.getElementById('info-btn');
 const audioBtn = document.getElementById('audio-btn');
-const infoModal = document.getElementById('info-modal');
-
 const mainVideo = document.getElementById('main-video');
 const mainAudio = document.getElementById('main-audio');
 
@@ -283,12 +292,9 @@ function resetAll() {
     mainAudio.currentTime = 0;
     isAudioPlaying = false;
     audioBtn.innerText = '🔊';
-
-    infoBtn.style.display = 'none';
     audioBtn.style.display = 'none';
-    infoModal.style.display = 'none';
 
-    // Xóa mô hình khỏi bộ nhớ (giải phóng RAM) và ẩn mặt phẳng video
+    // Xóa mô hình khỏi bộ nhớ (giải phóng RAM), ẩn thẻ thông tin và video
     for (let j = 0; j < 8; j++) {
         let modelEl = document.getElementById(`model-${j}`);
         if (modelEl) {
@@ -298,6 +304,11 @@ function resetAll() {
         let videoEl = document.getElementById(`video-${j}`);
         if (videoEl) {
             videoEl.setAttribute('visible', 'false');
+        }
+        let infoEl = document.getElementById(`info-${j}`);
+        if (infoEl) {
+            infoEl.removeAttribute('src'); // Gỡ luôn ảnh cho nhẹ
+            infoEl.setAttribute('visible', 'false');
         }
     }
 }
@@ -310,27 +321,33 @@ for (let i = 0; i < 8; i++) {
         if (activeIdx !== i) { resetAll(); }
         activeIdx = i;
         
-        infoBtn.style.display = 'flex';
         audioBtn.style.display = 'flex';
 
         let conf = cardConfig[i];
         
-        // Chuẩn bị file âm thanh
+        // 1. Gắn và hiển thị thẻ thông tin NGAY LẬP TỨC
+        let infoEl = document.getElementById(`info-${i}`);
+        if (infoEl) {
+            infoEl.setAttribute('src', `./tt${conf.id}.png`);
+            infoEl.setAttribute('visible', 'true');
+        }
+
+        // 2. Chuẩn bị file âm thanh
         mainAudio.src = `./${conf.id}.mp3`;
 
-        // Tải động dựa trên định dạng
+        // 3. Tải động mô hình hoặc video
         if (conf.type === 'model') {
             let modelEl = document.getElementById(`model-${i}`);
-            if (modelEl && !modelEl.getAttribute('gltf-model')) {
+            if (modelEl) {
                 modelEl.setAttribute('gltf-model', `url(./${conf.id}.glb)`);
+                modelEl.setAttribute('visible', 'true');
             }
-            if (modelEl) modelEl.setAttribute('visible', 'true');
         } else if (conf.type === 'video') {
             let videoEl = document.getElementById(`video-${i}`);
             if (videoEl) videoEl.setAttribute('visible', 'true');
             
             mainVideo.src = `./${conf.id}.mp4`;
-            mainVideo.muted = !isAudioPlaying; // Đồng bộ âm thanh video với trạng thái nút loa
+            mainVideo.muted = !isAudioPlaying; 
             mainVideo.play().catch(()=>{});
             currentVideoEl = mainVideo;
         }
@@ -357,31 +374,6 @@ audioBtn.addEventListener('click', () => {
     } else {
         mainAudio.pause();
         if (currentVideoEl) currentVideoEl.muted = true;
-    }
-});
-
-// HIỂN THỊ THÔNG TIN
-infoBtn.addEventListener('click', () => {
-    if (activeIdx === -1) return;
-    
-    let conf = cardConfig[activeIdx];
-    document.getElementById('info-content').src = `./tt${conf.id}.png`;
-    infoModal.style.display = 'flex';
-    
-    if (currentVideoEl) currentVideoEl.pause();
-    if (isAudioPlaying) mainAudio.pause();
-});
-
-// ĐÓNG THÔNG TIN
-infoModal.addEventListener('click', () => {
-    infoModal.style.display = 'none';
-    
-    if (isAudioPlaying) {
-        mainAudio.play().catch(()=>{});
-    }
-    
-    if (currentVideoEl) {
-        currentVideoEl.play().catch(()=>{});
     }
 });
 </script>
