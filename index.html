@@ -44,38 +44,6 @@ this.el.object3D.scale.z = this.scaleFactor * this.initialScale.z;
 }
 });
 
-AFRAME.registerComponent('gesture-detector', {
-init: function () {
-this.el.addEventListener('mousedown', (event) => { this.el.emit('rangeStart', event); });
-this.el.addEventListener('mousemove', (event) => { this.el.emit('onefingermove', { positionChange: { x: event.movementX / 100, y: event.movementY / 100 } }); });
-this.el.addEventListener('touchstart', (event) => {
-if(event.touches.length === 2) {
-this.startSpread = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, event.touches[0].pageY - event.touches[1].pageY);
-}
-if(event.touches.length === 1) {
-this.lastX = event.touches[0].clientX;
-this.lastY = event.touches[0].clientY;
-}
-});
-this.el.addEventListener('touchmove', (event) => {
-if (event.touches.length === 1) {
-const touch = event.touches[0];
-const movementX = touch.clientX - (this.lastX || touch.clientX);
-const movementY = touch.clientY - (this.lastY || touch.clientY);
-this.lastX = touch.clientX;
-this.lastY = touch.clientY;
-this.el.emit('onefingermove', { positionChange: { x: movementX / 100, y: movementY / 100 } });
-}
-if (event.touches.length === 2) {
-const spread = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, event.touches[0].pageY - event.touches[1].pageY);
-const spreadChange = spread - this.startSpread;
-this.el.emit('twofingermove', { spreadChange: spreadChange, startSpread: this.startSpread });
-this.startSpread = spread;
-}
-});
-}
-});
-
 AFRAME.registerComponent('blue-chromakey', {
 schema: {
 src: {type: 'selector'},
@@ -111,7 +79,13 @@ gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
 `,
 transparent: true, side: THREE.DoubleSide, depthTest: false
 });
-this.el.getObject3D('mesh').material = this.material;
+
+const applyMaterial = () => {
+    const mesh = this.el.getObject3D('mesh');
+    if (mesh) mesh.material = this.material;
+};
+if (this.el.hasLoaded) applyMaterial();
+else this.el.addEventListener('loaded', applyMaterial);
 },
 tick: function() { 
 let isVisible = this.el.object3D.visible;
@@ -126,468 +100,6 @@ if (this.texture) this.texture.needsUpdate = true;
 
 <style>
 body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; }
-
-a-assets { display: none !important; }
-
-#start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
-#loading-container { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; }
-.loading-text { font-size: 16px; margin-bottom: 20px; line-height: 1.6; color: #f8f9fa; font-style: italic; max-width: 85%; }
-.progress-box { width: 280px; height: 18px; background: rgba(255,255,255,0.2); border-radius: 20px; border: 2px solid #fff; overflow: hidden; position: relative; }
-#progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #FF8C00, #FFD700); transition: width 0.3s ease; }
-#progress-percentage { margin-top: 15px; font-weight: bold; font-size: 22px; color: #FFD700; }
-#start-btn { display: none; padding: 15px 50px; font-size: 24px; font-weight: bold; background: #FF4500; color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 69, 0, 0.6); margin-top: 20px; animation: pulse 1.5s infinite; }
-@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-.ui-btn { position: fixed; width: 50px; height: 50px; background: white; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 24px; font-weight: bold; z-index: 1000; cursor: pointer; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-#info-btn { top: 20px; right: 20px; }
-#audio-btn { top: 80px; right: 20px; font-size: 20px;}
-
-#menu-phunam10 { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); gap: 15px; z-index: 2000; flex-direction: row; }
-.num-btn { width: 45px; height: 45px; background: #fff59d; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-.num-btn:active { transform: scale(0.95); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-
-#back-btn { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); padding: 10px 25px; background: #d32f2f; color: white; border-radius: 20px; border: 2px solid white; font-weight: bold; display: none; z-index: 2000; cursor: pointer; }
-
-#info-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; justify-content: center; align-items: center; flex-direction: column; }
-#info-content { max-width: 95%; max-height: 85%; border-radius: 10px; border: 2px solid white; object-fit: contain; }
-
-.mindar-ui-overlay { display: none !important; }
-.mindar-ui-loading { display: none !important; }
-.mindar-ui-scanning { display: none !important; }
-</style>
-</head>
-
-<body>
-<div id="start-screen">
-    <div id="loading-container">
-        <div class="loading-text">
-            Mạng chưa ổn định, tui chạy hơi lâu xíu,<br>mong bạn thông cảm
-        </div>
-        <div class="progress-box">
-            <div id="progress-bar"></div>
-        </div>
-        <div id="progress-percentage">0%</div>
-    </div>
-    <button id="start-btn">SẴN SÀNG</button>
-</div>
-
-<div id="info-btn" class="ui-btn">i</div>
-<div id="audio-btn" class="ui-btn">🔊</div>
-
-<div id="menu-phunam10">
-    <div class="num-btn" onclick="selectSubModel('a')">1</div>
-    <div class="num-btn" onclick="selectSubModel('b')">2</div>
-    <div class="num-btn" onclick="selectSubModel('c')">3</div>
-    <div class="num-btn" onclick="selectSubModel('d')">4</div>
-</div>
-<button id="back-btn" onclick="goBackToVideo()">QUAY LẠI</button>
-
-<div id="info-modal">
-    <img id="info-content" src="" alt="Thông tin">
-    <div style="color:white; margin-top:10px">Chạm để đóng</div>
-</div>
-
-<a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; filterMinCF:0.001; filterBeta: 10;"
-color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights"
-vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
-gesture-detector>
-
-<a-assets timeout="40000">
-    <video id="main-video" src="" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="none"></video>
-    <audio id="main-audio" src="" preload="none"></audio>
-</a-assets>
-
-<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-<a-entity id="t0" mindar-image-target="targetIndex: 0">
-    <a-entity id="model-0" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-0" src="./ttchampa10.png" rotation="0 0 0" position="0 -1.3 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t1" mindar-image-target="targetIndex: 1">
-    <a-entity id="model-1" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-1" src="./ttchampa11.png" rotation="0 0 0" position="0 -1.3 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t2" mindar-image-target="targetIndex: 2">
-    <a-entity id="model-2" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-2" src="./ttchampa13.png" rotation="0 0 0" position="0 -1.3 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t3" mindar-image-target="targetIndex: 3">
-    <a-entity id="model-3" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-3" src="./ttphunam8.png" rotation="0 0 0" position="0 -1.3 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t4" mindar-image-target="targetIndex: 4">
-    <a-entity id="model-4" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-4" src="./ttphunam9.png" rotation="0 0 0" position="0 -1.3 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t5" mindar-image-target="targetIndex: 5">
-    <a-plane id="video-5" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0" visible="false"></a-plane>
-    <a-entity id="sub-model-5" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-5" src="./ttphunam10.png" rotation="0 0 0" position="0 -1.6 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t6" mindar-image-target="targetIndex: 6">
-    <a-plane id="video-6" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0" visible="false"></a-plane>
-    <a-image id="info-6" src="./ttphunam11.png" rotation="0 0 0" position="0 -1.6 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-<a-entity id="t7" mindar-image-target="targetIndex: 7">
-    <a-entity id="model-7" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-7" src="./ttvanlang8.png" rotation="0 0 0" position="0 -1.3 0.1" width="1.6" height="1" visible="false"></a-image>
-</a-entity>
-
-</a-scene>
-
-<script>
-const loadingContainer = document.getElementById('loading-container');
-const startBtn = document.getElementById('start-btn');
-const progressBar = document.getElementById('progress-bar');
-const progressText = document.getElementById('progress-percentage');
-const sceneEl = document.querySelector('a-scene');
-
-let loadProgress = 0;
-let progressInterval = setInterval(() => {
-    loadProgress += Math.floor(Math.random() * 6) + 2; 
-    if (loadProgress >= 95) loadProgress = 95; 
-    progressBar.style.width = loadProgress + '%';
-    progressText.innerText = loadProgress + '%';
-}, 300);
-
-function finishLoading() {
-    clearInterval(progressInterval);
-    progressBar.style.width = '100%';
-    progressText.innerText = '100%';
-    setTimeout(() => {
-        loadingContainer.style.display = 'none';
-        startBtn.style.display = 'block';
-    }, 500);
-}
-
-if (sceneEl.hasLoaded) {
-    finishLoading();
-} else {
-    sceneEl.addEventListener('loaded', finishLoading);
-}
-
-const startScreen = document.getElementById('start-screen');
-const infoBtn = document.getElementById('info-btn');
-const audioBtn = document.getElementById('audio-btn');
-const infoModal = document.getElementById('info-modal');
-const menuPhunam10 = document.getElementById('menu-phunam10');
-const backBtn = document.getElementById('back-btn');
-
-const mainVideo = document.getElementById('main-video');
-const mainAudio = document.getElementById('main-audio');
-
-const cardConfig = [
-    { type: 'model', id: 'champa10' },
-    { type: 'model', id: 'champa11' },
-    { type: 'model', id: 'champa13' },
-    { type: 'model', id: 'phunam8' },
-    { type: 'model', id: 'phunam9' },
-    { type: 'mixed', id: 'phunam10' }, 
-    { type: 'video', id: 'phunam11' },
-    { type: 'model', id: 'vanlang8' }
-];
-
-let activeIdx = -1; 
-let isAudioPlaying = false;
-let currentVideoEl = null;
-
-startBtn.addEventListener('click', () => {
-    startScreen.style.display = 'none';
-    const dummy = new Audio(); dummy.play().catch(()=>{});
-});
-
-function resetAll() {
-    if (currentVideoEl) {
-        currentVideoEl.pause();
-        currentVideoEl.currentTime = 0;
-        currentVideoEl = null;
-    }
-    
-    mainAudio.pause();
-    mainAudio.currentTime = 0;
-    isAudioPlaying = false;
-    audioBtn.innerText = '🔊';
-    audioBtn.style.display = 'none';
-    infoBtn.style.display = 'none';
-    infoModal.style.display = 'none';
-    menuPhunam10.style.display = 'none';
-    backBtn.style.display = 'none';
-
-    for (let j = 0; j < 8; j++) {
-        let modelEl = document.getElementById(`model-${j}`);
-        if (modelEl) {
-            modelEl.removeAttribute('gltf-model');
-            modelEl.setAttribute('visible', 'false');
-        }
-        
-        let videoEl = document.getElementById(`video-${j}`);
-        if (videoEl) videoEl.setAttribute('visible', 'false');
-        
-        let infoEl = document.getElementById(`info-${j}`);
-        if (infoEl) infoEl.setAttribute('visible', 'false');
-    }
-    
-    let subModel = document.getElementById('sub-model-5');
-    if (subModel) {
-        subModel.removeAttribute('gltf-model');
-        subModel.setAttribute('visible', 'false');
-    }
-}
-
-for (let i = 0; i < 8; i++) {
-    const entity = document.getElementById(`t${i}`);
-    if (!entity) continue;
-
-    entity.addEventListener('targetFound', () => {
-        if (activeIdx !== i) { resetAll(); }
-        activeIdx = i;
-        
-        infoBtn.style.display = 'flex';
-        audioBtn.style.display = 'flex';
-
-        let conf = cardConfig[i];
-        
-        let infoEl = document.getElementById(`info-${i}`);
-        if (infoEl) infoEl.setAttribute('visible', 'true');
-
-        mainAudio.src = `./${conf.id}.mp3`;
-
-        if (conf.type === 'model') {
-            let modelEl = document.getElementById(`model-${i}`);
-            if (modelEl) {
-                modelEl.setAttribute('gltf-model', `url(./${conf.id}.glb)`);
-                modelEl.setAttribute('visible', 'true');
-            }
-        } 
-        else if (conf.type === 'video') {
-            let videoEl = document.getElementById(`video-${i}`);
-            if (videoEl) videoEl.setAttribute('visible', 'true');
-            
-            mainVideo.src = `./${conf.id}.mp4`;
-            mainVideo.muted = !isAudioPlaying; 
-            mainVideo.play().catch(()=>{});
-            currentVideoEl = mainVideo;
-        }
-        else if (conf.type === 'mixed') {
-            let videoEl = document.getElementById(`video-${i}`);
-            if (videoEl) videoEl.setAttribute('visible', 'true');
-            
-            mainVideo.src = `./${conf.id}.mp4`;
-            mainVideo.muted = !isAudioPlaying; 
-            mainVideo.play().catch(()=>{});
-            currentVideoEl = mainVideo;
-            
-            menuPhunam10.style.display = 'flex';
-        }
-    });
-
-    entity.addEventListener('targetLost', () => {
-        if (activeIdx === i) {
-            resetAll();
-            activeIdx = -1;
-        }
-    });
-}
-
-audioBtn.addEventListener('click', () => {
-    if (activeIdx === -1) return;
-
-    isAudioPlaying = !isAudioPlaying;
-    audioBtn.innerText = isAudioPlaying ? '🎵' : '🔊';
-
-    if (isAudioPlaying) {
-        mainAudio.play().catch(()=>{});
-        if (currentVideoEl) currentVideoEl.muted = false;
-    } else {
-        mainAudio.pause();
-        if (currentVideoEl) currentVideoEl.muted = true;
-    }
-});
-
-window.selectSubModel = function(suffix) {
-    if (currentVideoEl) currentVideoEl.pause();
-    document.getElementById('video-5').setAttribute('visible', 'false');
-    
-    let subModel = document.getElementById('sub-model-5');
-    subModel.setAttribute('gltf-model', `url(./phunam10${suffix}.glb)`);
-    subModel.setAttribute('visible', 'true');
-    
-    menuPhunam10.style.display = 'none';
-    backBtn.style.display = 'block';
-}
-
-window.goBackToVideo = function() {
-    let subModel = document.getElementById('sub-model-5');
-    subModel.removeAttribute('gltf-model');
-    subModel.setAttribute('visible', 'false');
-    
-    document.getElementById('video-5').setAttribute('visible', 'true');
-    if (currentVideoEl) currentVideoEl.play().catch(()=>{});
-    
-    backBtn.style.display = 'none';
-    menuPhunam10.style.display = 'flex';
-}
-
-infoBtn.addEventListener('click', () => {
-    if (activeIdx === -1) return;
-    
-    let conf = cardConfig[activeIdx];
-    document.getElementById('info-content').src = `./tt${conf.id}.png`;
-    infoModal.style.display = 'flex';
-    
-    if (currentVideoEl) currentVideoEl.pause();
-    if (isAudioPlaying) mainAudio.pause();
-});
-
-infoModal.addEventListener('click', () => {
-    infoModal.style.display = 'none';
-    
-    if (isAudioPlaying) {
-        mainAudio.play().catch(()=>{});
-    }
-    if (currentVideoEl) {
-        currentVideoEl.play().catch(()=>{});
-    }
-});
-</script>
-</body>
-</html><!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
-<title>AR Cham Pa Phu Nam</title>
-<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
-
-<script>
-AFRAME.registerComponent('gesture-handler', {
-schema: { enabled: { default: true }, rotationFactor: { default: 5 }, minScale: { default: 0.1 }, maxScale: { default: 8 } },
-init: function () {
-this.handleScale = this.handleScale.bind(this);
-this.handleRotation = this.handleRotation.bind(this);
-this.isVisible = false;
-this.initialScale = this.el.object3D.scale.clone();
-this.scaleFactor = 1;
-
-const targetEl = this.el.closest('[mindar-image-target]');
-if (targetEl) {
-    targetEl.addEventListener("targetFound", () => { this.isVisible = true; });
-    targetEl.addEventListener("targetLost", () => { this.isVisible = false; });
-}
-},
-update: function () {
-this.el.sceneEl.addEventListener("onefingermove", this.handleRotation);
-this.el.sceneEl.addEventListener("twofingermove", this.handleScale);
-},
-handleRotation: function (event) {
-if (this.isVisible) {
-this.el.object3D.rotation.y += event.detail.positionChange.x * this.data.rotationFactor;
-this.el.object3D.rotation.x += event.detail.positionChange.y * this.data.rotationFactor;
-}
-},
-handleScale: function (event) {
-if (this.isVisible) {
-this.scaleFactor *= (1 + event.detail.spreadChange / event.detail.startSpread);
-this.scaleFactor = Math.min(Math.max(this.scaleFactor, this.data.minScale), this.data.maxScale);
-this.el.object3D.scale.x = this.scaleFactor * this.initialScale.x;
-this.el.object3D.scale.y = this.scaleFactor * this.initialScale.y;
-this.el.object3D.scale.z = this.scaleFactor * this.initialScale.z;
-}
-}
-});
-
-AFRAME.registerComponent('gesture-detector', {
-init: function () {
-this.el.addEventListener('mousedown', (event) => { this.el.emit('rangeStart', event); });
-this.el.addEventListener('mousemove', (event) => { this.el.emit('onefingermove', { positionChange: { x: event.movementX / 100, y: event.movementY / 100 } }); });
-this.el.addEventListener('touchstart', (event) => {
-if(event.touches.length === 2) {
-this.startSpread = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, event.touches[0].pageY - event.touches[1].pageY);
-}
-if(event.touches.length === 1) {
-this.lastX = event.touches[0].clientX;
-this.lastY = event.touches[0].clientY;
-}
-});
-this.el.addEventListener('touchmove', (event) => {
-if (event.touches.length === 1) {
-const touch = event.touches[0];
-const movementX = touch.clientX - (this.lastX || touch.clientX);
-const movementY = touch.clientY - (this.lastY || touch.clientY);
-this.lastX = touch.clientX;
-this.lastY = touch.clientY;
-this.el.emit('onefingermove', { positionChange: { x: movementX / 100, y: movementY / 100 } });
-}
-if (event.touches.length === 2) {
-const spread = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, event.touches[0].pageY - event.touches[1].pageY);
-const spreadChange = spread - this.startSpread;
-this.el.emit('twofingermove', { spreadChange: spreadChange, startSpread: this.startSpread });
-this.startSpread = spread;
-}
-});
-}
-});
-
-AFRAME.registerComponent('blue-chromakey', {
-schema: {
-src: {type: 'selector'},
-color: {type: 'vec3', default: {x: 0.0, y: 1.0, z: 0.0}}, 
-similarity: {default: 0.25, type: 'number'},
-crop: {default: 0.02, type: 'number'}
-},
-init: function() {
-const videoEl = this.data.src;
-if (!videoEl) return;
-this.videoEl = videoEl;
-this.texture = new THREE.VideoTexture(videoEl);
-this.texture.minFilter = THREE.LinearFilter;
-this.texture.format = THREE.RGBAFormat;
-this.material = new THREE.ShaderMaterial({
-uniforms: {
-map: { value: this.texture },
-keyColor: { value: new THREE.Vector3(this.data.color.x, this.data.color.y, this.data.color.z) },
-similarity: { value: this.data.similarity },
-smoothness: { value: 0.08 },
-cropMargin: { value: this.data.crop } 
-},
-vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
-fragmentShader: `
-uniform sampler2D map; uniform vec3 keyColor; uniform float similarity; uniform float smoothness; uniform float cropMargin; varying vec2 vUv;
-void main() {
-if (vUv.y < cropMargin || vUv.y > (1.0 - cropMargin) || vUv.x < cropMargin || vUv.x > (1.0 - cropMargin)) { gl_FragColor = vec4(0.0); return; }
-vec4 texColor = texture2D(map, vUv);
-float d = distance(texColor.rgb, keyColor);
-float alpha = smoothstep(similarity, similarity + smoothness, d);
-gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
-}
-`,
-transparent: true, side: THREE.DoubleSide, depthTest: false
-});
-this.el.getObject3D('mesh').material = this.material;
-},
-tick: function() { 
-let isVisible = this.el.object3D.visible;
-let parentVisible = this.el.object3D.parent ? this.el.object3D.parent.visible : true;
-if (!isVisible || !parentVisible) return; 
-
-if (!this.videoEl || this.videoEl.paused || this.videoEl.readyState < 2) return;
-if (this.texture) this.texture.needsUpdate = true; 
-}
-});
-</script>
-
-<style>
-body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; }
-
-a-assets { display: none !important; }
 
 #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
 #loading-container { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; }
@@ -633,6 +145,20 @@ a-assets { display: none !important; }
     </div>
     <button id="start-btn">SẴN SÀNG</button>
 </div>
+
+<!-- ĐOẠN MÃ XỬ LÝ THANH CHẠY (Chạy ngay lập tức) -->
+<script>
+let loadProgress = 0;
+let pb = document.getElementById('progress-bar');
+let pt = document.getElementById('progress-percentage');
+
+let progressInterval = setInterval(() => {
+    loadProgress += Math.floor(Math.random() * 6) + 2; 
+    if (loadProgress >= 95) loadProgress = 95; 
+    if (pb) pb.style.width = loadProgress + '%';
+    if (pt) pt.innerText = loadProgress + '%';
+}, 300);
+</script>
 
 <div id="info-btn" class="ui-btn" onclick="showInfo()">ℹ️</div>
 <div id="audio-btn" class="ui-btn" onclick="toggleAudio()">🔊</div>
@@ -689,36 +215,25 @@ gesture-detector>
 </a-scene>
 
 <script>
-const loadingContainer = document.getElementById('loading-container');
-const startBtn = document.getElementById('start-btn');
-const progressBar = document.getElementById('progress-bar');
-const progressText = document.getElementById('progress-percentage');
-const sceneEl = document.querySelector('a-scene');
-
-let loadProgress = 0;
-let progressInterval = setInterval(() => {
-    loadProgress += Math.floor(Math.random() * 6) + 2; 
-    if (loadProgress >= 95) loadProgress = 95; 
-    progressBar.style.width = loadProgress + '%';
-    progressText.innerText = loadProgress + '%';
-}, 300);
-
+// --- KẾT THÚC THANH TẢI TRANG KHI AR ĐÃ SẴN SÀNG ---
 function finishLoading() {
     clearInterval(progressInterval);
-    progressBar.style.width = '100%';
-    progressText.innerText = '100%';
+    if (pb) pb.style.width = '100%';
+    if (pt) pt.innerText = '100%';
     setTimeout(() => {
-        loadingContainer.style.display = 'none';
-        startBtn.style.display = 'block';
+        document.getElementById('loading-container').style.display = 'none';
+        document.getElementById('start-btn').style.display = 'block';
     }, 500);
 }
 
+const sceneEl = document.querySelector('a-scene');
 if (sceneEl.hasLoaded) {
     finishLoading();
 } else {
     sceneEl.addEventListener('loaded', finishLoading);
 }
 
+// --- LOGIC HỆ THỐNG CHÍNH ---
 const startScreen = document.getElementById('start-screen');
 const infoBtn = document.getElementById('info-btn');
 const audioBtn = document.getElementById('audio-btn');
@@ -731,21 +246,21 @@ const mainVideo = document.getElementById('main-video');
 const mainAudio = document.getElementById('main-audio');
 
 const cardConfig = [
-    { type: 'model', id: 'champa10', hasInfo: true, hasAudio: true },
-    { type: 'model', id: 'champa11', hasInfo: true, hasAudio: true },
-    { type: 'model', id: 'champa13', hasInfo: true, hasAudio: true },
-    { type: 'model', id: 'phunam8', hasInfo: true, hasAudio: true },
-    { type: 'model', id: 'phunam9', hasInfo: true, hasAudio: true },
-    { type: 'mixed', id: 'phunam10', hasInfo: true, hasAudio: true }, 
-    { type: 'video', id: 'phunam11', hasInfo: true, hasAudio: true },
-    { type: 'model', id: 'vanlang8', hasInfo: true, hasAudio: true }
+    { type: 'model', id: 'champa10', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'champa11', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'champa13', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'phunam8', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'phunam9', hasInfo: true, hasAudio: false },
+    { type: 'mixed', id: 'phunam10', hasInfo: true, hasAudio: false }, 
+    { type: 'video', id: 'phunam11', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'vanlang8', hasInfo: true, hasAudio: true } 
 ];
 
 let activeIdx = -1; 
 let isAudioPlaying = false;
 let currentVideoEl = null;
 
-startBtn.addEventListener('click', () => {
+document.getElementById('start-btn').addEventListener('click', () => {
     startScreen.style.display = 'none';
     const dummy = new Audio(); dummy.play().catch(()=>{});
 });
@@ -872,7 +387,9 @@ function toggleAudio() {
     isAudioPlaying = !isAudioPlaying;
     audioBtn.innerText = isAudioPlaying ? '🎵' : '🔊';
 
-    mainAudio.src = `./${conf.id}.mp3`;
+    if (mainAudio.src.indexOf(conf.id + '.mp3') === -1) {
+        mainAudio.src = `./${conf.id}.mp3`;
+    }
 
     if (isAudioPlaying) {
         mainAudio.play().catch(()=>{});
