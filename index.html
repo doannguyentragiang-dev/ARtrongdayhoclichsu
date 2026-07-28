@@ -30,6 +30,7 @@ this.el.sceneEl.addEventListener("twofingermove", this.handleScale);
 },
 handleRotation: function (event) {
 if (this.isVisible) {
+// Bắt trục X và Y để xoay lật đa chiều
 this.el.object3D.rotation.y += event.detail.positionChange.x * this.data.rotationFactor;
 this.el.object3D.rotation.x += event.detail.positionChange.y * this.data.rotationFactor;
 }
@@ -77,7 +78,7 @@ this.startSpread = spread;
 }
 });
 
-// TÁCH NỀN VIDEO NẾU CẦN THIẾT
+// TÁCH NỀN VIDEO
 AFRAME.registerComponent('blue-chromakey', {
 schema: {
 src: {type: 'selector'},
@@ -129,7 +130,7 @@ if (this.texture) this.texture.needsUpdate = true;
 <style>
 body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; }
 
-a-assets, audio { display: none !important; }
+a-assets { display: none !important; }
 
 /* GIAO DIỆN THANH TẢI TRANG */
 #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
@@ -144,6 +145,13 @@ a-assets, audio { display: none !important; }
 /* NÚT TƯƠNG TÁC */
 .ui-btn { position: fixed; width: 50px; height: 50px; background: white; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 24px; font-weight: bold; z-index: 1000; cursor: pointer; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 #audio-btn { top: 20px; right: 20px; font-size: 20px;}
+
+/* NÚT SỐ MENU THẺ 6 */
+#menu-phunam10 { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); gap: 15px; z-index: 2000; flex-direction: row; }
+.num-btn { width: 45px; height: 45px; background: #fff59d; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.num-btn:active { transform: scale(0.95); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+#back-btn { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); padding: 10px 25px; background: #d32f2f; color: white; border-radius: 20px; border: 2px solid white; font-weight: bold; display: none; z-index: 2000; cursor: pointer; }
 
 .mindar-ui-overlay { display: none !important; }
 .mindar-ui-loading { display: none !important; }
@@ -167,57 +175,89 @@ a-assets, audio { display: none !important; }
 
 <div id="audio-btn" class="ui-btn">🔊</div>
 
+<!-- MENU SỐ CHO HÌNH 6 -->
+<div id="menu-phunam10">
+    <div class="num-btn" onclick="selectSubModel('a')">1</div>
+    <div class="num-btn" onclick="selectSubModel('b')">2</div>
+    <div class="num-btn" onclick="selectSubModel('c')">3</div>
+    <div class="num-btn" onclick="selectSubModel('d')">4</div>
+</div>
+<button id="back-btn" onclick="goBackToVideo()">QUAY LẠI</button>
+
 <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; filterMinCF:0.001; filterBeta: 10;"
 color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights"
 vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
 gesture-detector>
 
-<a-assets timeout="30000">
+<!-- TẢI TRƯỚC ĐỂ ĐẢM BẢO 100% HIỂN THỊ NGAY LẬP TỨC -->
+<a-assets timeout="40000">
     <video id="main-video" src="" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="none"></video>
     <audio id="main-audio" src="" preload="none"></audio>
+    
+    <a-asset-item id="m-champa10" src="./champa10.glb"></a-asset-item>
+    <a-asset-item id="m-champa11" src="./champa11.glb"></a-asset-item>
+    <a-asset-item id="m-champa13" src="./champa13.glb"></a-asset-item>
+    <a-asset-item id="m-phunam8" src="./phunam8.glb"></a-asset-item>
+    <a-asset-item id="m-phunam9" src="./phunam9.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10a" src="./phunam10a.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10b" src="./phunam10b.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10c" src="./phunam10c.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10d" src="./phunam10d.glb"></a-asset-item>
+    <a-asset-item id="m-vanlang8" src="./vanlang8.glb"></a-asset-item>
 </a-assets>
 
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<!-- Hình ảnh 1 -> 8 (Index 0 -> 7). Thẻ thông tin nằm ngay dưới mô hình (y = -1.2) -->
+<!-- Hình 1 (Index 0) -->
 <a-entity id="t0" mindar-image-target="targetIndex: 0">
-    <a-entity id="model-0" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-0" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+    <a-entity id="model-0" gltf-model="#m-champa10" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-0" src="./ttchampa10.png" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 2 (Index 1) -->
 <a-entity id="t1" mindar-image-target="targetIndex: 1">
-    <a-entity id="model-1" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-1" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+    <a-entity id="model-1" gltf-model="#m-champa11" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-1" src="./ttchampa11.png" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 3 (Index 2) -->
 <a-entity id="t2" mindar-image-target="targetIndex: 2">
-    <a-entity id="model-2" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-2" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+    <a-entity id="model-2" gltf-model="#m-champa13" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-2" src="./ttchampa13.png" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 4 (Index 3) -->
 <a-entity id="t3" mindar-image-target="targetIndex: 3">
-    <a-entity id="model-3" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-3" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+    <a-entity id="model-3" gltf-model="#m-phunam8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-3" src="./ttphunam8.png" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 5 (Index 4) -->
 <a-entity id="t4" mindar-image-target="targetIndex: 4">
-    <a-entity id="model-4" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-4" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+    <a-entity id="model-4" gltf-model="#m-phunam9" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-4" src="./ttphunam9.png" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 6 (Index 5): Video + Menu 1,2,3,4 -->
 <a-entity id="t5" mindar-image-target="targetIndex: 5">
-    <a-plane id="video-5" visible="false" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0"></a-plane>
-    <a-image id="info-5" rotation="0 0 0" position="0 -1.6 0" width="1.6" height="1" visible="false"></a-image>
+    <a-plane id="video-5" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0" visible="false"></a-plane>
+    <a-entity id="model-5a" gltf-model="#m-phunam10a" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-entity id="model-5b" gltf-model="#m-phunam10b" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-entity id="model-5c" gltf-model="#m-phunam10c" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-entity id="model-5d" gltf-model="#m-phunam10d" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-5" src="./ttphunam10.png" rotation="0 0 0" position="0 -1.6 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 7 (Index 6) -->
 <a-entity id="t6" mindar-image-target="targetIndex: 6">
-    <a-plane id="video-6" visible="false" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0"></a-plane>
-    <a-image id="info-6" rotation="0 0 0" position="0 -1.6 0" width="1.6" height="1" visible="false"></a-image>
+    <a-plane id="video-6" rotation="0 0 0" position="0 0 0" height="2" width="1.2" blue-chromakey="src: #main-video; color: 0 1 0" visible="false"></a-plane>
+    <a-image id="info-6" src="./ttphunam11.png" rotation="0 0 0" position="0 -1.6 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
+<!-- Hình 8 (Index 7) -->
 <a-entity id="t7" mindar-image-target="targetIndex: 7">
-    <a-entity id="model-7" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-image id="info-7" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
+    <a-entity id="model-7" gltf-model="#m-vanlang8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-image id="info-7" src="./ttvanlang8.png" rotation="0 0 0" position="0 -1.2 0" width="1.6" height="1" visible="false"></a-image>
 </a-entity>
 
 </a-scene>
@@ -254,20 +294,22 @@ if (sceneEl.hasLoaded) {
     sceneEl.addEventListener('loaded', finishLoading);
 }
 
-// --- LOGIC AR, NÚT BẤM, TẢI ĐỘNG MÔ HÌNH, THẺ THÔNG TIN VÀ VIDEO ---
+// --- LOGIC AR, NÚT BẤM ---
 const startScreen = document.getElementById('start-screen');
 const audioBtn = document.getElementById('audio-btn');
+const menuPhunam10 = document.getElementById('menu-phunam10');
+const backBtn = document.getElementById('back-btn');
+
 const mainVideo = document.getElementById('main-video');
 const mainAudio = document.getElementById('main-audio');
 
-// Cấu hình dữ liệu tương ứng cho 8 thẻ (từ 0 đến 7)
 const cardConfig = [
     { type: 'model', id: 'champa10' },
     { type: 'model', id: 'champa11' },
     { type: 'model', id: 'champa13' },
     { type: 'model', id: 'phunam8' },
     { type: 'model', id: 'phunam9' },
-    { type: 'video', id: 'phunam10' },
+    { type: 'mixed', id: 'phunam10' }, // Video + Menu
     { type: 'video', id: 'phunam11' },
     { type: 'model', id: 'vanlang8' }
 ];
@@ -293,24 +335,26 @@ function resetAll() {
     isAudioPlaying = false;
     audioBtn.innerText = '🔊';
     audioBtn.style.display = 'none';
+    menuPhunam10.style.display = 'none';
+    backBtn.style.display = 'none';
 
-    // Xóa mô hình khỏi bộ nhớ (giải phóng RAM), ẩn thẻ thông tin và video
+    // Ẩn tất cả khi mất thẻ
     for (let j = 0; j < 8; j++) {
         let modelEl = document.getElementById(`model-${j}`);
-        if (modelEl) {
-            modelEl.removeAttribute('gltf-model');
-            modelEl.setAttribute('visible', 'false');
-        }
+        if (modelEl) modelEl.setAttribute('visible', 'false');
+        
         let videoEl = document.getElementById(`video-${j}`);
-        if (videoEl) {
-            videoEl.setAttribute('visible', 'false');
-        }
+        if (videoEl) videoEl.setAttribute('visible', 'false');
+        
         let infoEl = document.getElementById(`info-${j}`);
-        if (infoEl) {
-            infoEl.removeAttribute('src'); // Gỡ luôn ảnh cho nhẹ
-            infoEl.setAttribute('visible', 'false');
-        }
+        if (infoEl) infoEl.setAttribute('visible', 'false');
     }
+    
+    // Ẩn các model phụ của hình 6
+    ['a', 'b', 'c', 'd'].forEach(suffix => {
+        let subModel = document.getElementById(`model-5${suffix}`);
+        if (subModel) subModel.setAttribute('visible', 'false');
+    });
 }
 
 for (let i = 0; i < 8; i++) {
@@ -320,29 +364,22 @@ for (let i = 0; i < 8; i++) {
     entity.addEventListener('targetFound', () => {
         if (activeIdx !== i) { resetAll(); }
         activeIdx = i;
-        
         audioBtn.style.display = 'flex';
 
         let conf = cardConfig[i];
         
-        // 1. Gắn và hiển thị thẻ thông tin NGAY LẬP TỨC
+        // Hiện thẻ thông tin tương ứng
         let infoEl = document.getElementById(`info-${i}`);
-        if (infoEl) {
-            infoEl.setAttribute('src', `./tt${conf.id}.png`);
-            infoEl.setAttribute('visible', 'true');
-        }
+        if (infoEl) infoEl.setAttribute('visible', 'true');
 
-        // 2. Chuẩn bị file âm thanh
+        // Chuẩn bị âm thanh
         mainAudio.src = `./${conf.id}.mp3`;
 
-        // 3. Tải động mô hình hoặc video
         if (conf.type === 'model') {
             let modelEl = document.getElementById(`model-${i}`);
-            if (modelEl) {
-                modelEl.setAttribute('gltf-model', `url(./${conf.id}.glb)`);
-                modelEl.setAttribute('visible', 'true');
-            }
-        } else if (conf.type === 'video') {
+            if (modelEl) modelEl.setAttribute('visible', 'true');
+        } 
+        else if (conf.type === 'video') {
             let videoEl = document.getElementById(`video-${i}`);
             if (videoEl) videoEl.setAttribute('visible', 'true');
             
@@ -350,6 +387,17 @@ for (let i = 0; i < 8; i++) {
             mainVideo.muted = !isAudioPlaying; 
             mainVideo.play().catch(()=>{});
             currentVideoEl = mainVideo;
+        }
+        else if (conf.type === 'mixed') { // Xử lý riêng Hình 6
+            let videoEl = document.getElementById(`video-${i}`);
+            if (videoEl) videoEl.setAttribute('visible', 'true');
+            
+            mainVideo.src = `./${conf.id}.mp4`;
+            mainVideo.muted = !isAudioPlaying; 
+            mainVideo.play().catch(()=>{});
+            currentVideoEl = mainVideo;
+            
+            menuPhunam10.style.display = 'flex';
         }
     });
 
@@ -376,6 +424,41 @@ audioBtn.addEventListener('click', () => {
         if (currentVideoEl) currentVideoEl.muted = true;
     }
 });
+
+// XỬ LÝ NÚT CHỌN MÔ HÌNH TRONG HÌNH 6
+window.selectSubModel = function(suffix) {
+    // Tạm dừng và ẩn video
+    if (currentVideoEl) currentVideoEl.pause();
+    document.getElementById('video-5').setAttribute('visible', 'false');
+    
+    // Ẩn các model khác
+    ['a', 'b', 'c', 'd'].forEach(char => {
+        document.getElementById(`model-5${char}`).setAttribute('visible', 'false');
+    });
+    
+    // Hiển thị model được chọn
+    document.getElementById(`model-5${suffix}`).setAttribute('visible', 'true');
+    
+    // Đổi nút
+    menuPhunam10.style.display = 'none';
+    backBtn.style.display = 'block';
+}
+
+// XỬ LÝ NÚT QUAY LẠI CỦA HÌNH 6
+window.goBackToVideo = function() {
+    // Ẩn tất cả model phụ
+    ['a', 'b', 'c', 'd'].forEach(char => {
+        document.getElementById(`model-5${char}`).setAttribute('visible', 'false');
+    });
+    
+    // Hiển thị lại video
+    document.getElementById('video-5').setAttribute('visible', 'true');
+    if (currentVideoEl) currentVideoEl.play().catch(()=>{});
+    
+    // Đổi nút
+    backBtn.style.display = 'none';
+    menuPhunam10.style.display = 'flex';
+}
 </script>
 </body>
 </html>
