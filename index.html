@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
 
 <script>
-// CẢM ỨNG XOAY ĐA CHIỀU
+// CẢM ỨNG XOAY ĐA CHIỀU (TỪ CODE GỐC CỦA BẠN)
 AFRAME.registerComponent('gesture-handler', {
 schema: { enabled: { default: true }, rotationFactor: { default: 5 }, minScale: { default: 0.1 }, maxScale: { default: 8 } },
 init: function () {
@@ -17,8 +17,12 @@ this.handleRotation = this.handleRotation.bind(this);
 this.isVisible = false;
 this.initialScale = this.el.object3D.scale.clone();
 this.scaleFactor = 1;
-this.el.sceneEl.addEventListener("markerFound", (e) => { this.isVisible = true; });
-this.el.sceneEl.addEventListener("markerLost", (e) => { this.isVisible = false; });
+
+const targetEl = this.el.closest('[mindar-image-target]');
+if (targetEl) {
+    targetEl.addEventListener("targetFound", () => { this.isVisible = true; });
+    targetEl.addEventListener("targetLost", () => { this.isVisible = false; });
+}
 },
 update: function () {
 this.el.sceneEl.addEventListener("onefingermove", this.handleRotation);
@@ -51,14 +55,14 @@ this.startSpread = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, e
 }
 if(event.touches.length === 1) {
 this.lastX = event.touches[0].clientX;
-this.lastY = event.touches[0].clientY;
+this.lastY = event.touches[0].clientY; 
 }
 });
 this.el.addEventListener('touchmove', (event) => {
 if (event.touches.length === 1) {
 const touch = event.touches[0];
 const movementX = touch.clientX - (this.lastX || touch.clientX);
-const movementY = touch.clientY - (this.lastY || touch.clientY);
+const movementY = touch.clientY - (this.lastY || touch.clientY); 
 this.lastX = touch.clientX;
 this.lastY = touch.clientY;
 this.el.emit('onefingermove', { positionChange: { x: movementX / 100, y: movementY / 100 } });
@@ -72,293 +76,224 @@ this.startSpread = spread;
 });
 }
 });
-
-// TÁCH NỀN VIDEO
-AFRAME.registerComponent('blue-chromakey', {
-schema: {
-src: {type: 'selector'},
-color: {type: 'vec3', default: {x: 0.0, y: 1.0, z: 0.0}}, 
-similarity: {default: 0.25, type: 'number'},
-crop: {default: 0.02, type: 'number'}
-},
-init: function() {
-const videoEl = this.data.src;
-if (!videoEl) return;
-this.videoEl = videoEl;
-this.texture = new THREE.VideoTexture(videoEl);
-this.texture.minFilter = THREE.LinearFilter;
-this.texture.format = THREE.RGBAFormat;
-this.material = new THREE.ShaderMaterial({
-uniforms: {
-map: { value: this.texture },
-keyColor: { value: new THREE.Vector3(this.data.color.x, this.data.color.y, this.data.color.z) },
-similarity: { value: this.data.similarity },
-smoothness: { value: 0.08 },
-cropMargin: { value: this.data.crop } 
-},
-vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
-fragmentShader: `
-uniform sampler2D map; uniform vec3 keyColor; uniform float similarity; uniform float smoothness; uniform float cropMargin; varying vec2 vUv;
-void main() {
-if (vUv.y < cropMargin || vUv.y > (1.0 - cropMargin) || vUv.x < cropMargin || vUv.x > (1.0 - cropMargin)) { gl_FragColor = vec4(0.0); return; }
-vec4 texColor = texture2D(map, vUv);
-float d = distance(texColor.rgb, keyColor);
-float alpha = smoothstep(similarity, similarity + smoothness, d);
-gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
-}
-`,
-transparent: true, side: THREE.DoubleSide, depthTest: false
-});
-this.el.getObject3D('mesh').material = this.material;
-},
-tick: function() { 
-let isVisible = this.el.object3D.visible;
-let parentVisible = this.el.object3D.parent ? this.el.object3D.parent.visible : true;
-if (!isVisible || !parentVisible) return; 
-
-if (!this.videoEl || this.videoEl.paused || this.videoEl.readyState < 2) return;
-if (this.texture) this.texture.needsUpdate = true; 
-}
-});
 </script>
 
 <style>
 body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none; }
 
-/* THANH TẢI TRANG */
+/* MÀN HÌNH CHỜ */
 #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
-#start-btn { display: none; padding: 15px 50px; font-size: 24px; font-weight: bold; background: #FF4500; color: white; border: none; border-radius: 50px; cursor: pointer; margin-top: 20px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.6); }
+#loading-container { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; }
+.loading-text { font-size: 16px; margin-bottom: 20px; line-height: 1.6; color: #f8f9fa; font-style: italic; max-width: 85%; }
+.progress-box { width: 280px; height: 18px; background: rgba(255,255,255,0.2); border-radius: 20px; border: 2px solid #fff; overflow: hidden; position: relative; }
+#progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #FF8C00, #FFD700); transition: width 0.3s ease; }
+#progress-percentage { margin-top: 15px; font-weight: bold; font-size: 22px; color: #FFD700; }
+#start-btn { display: none; padding: 15px 50px; font-size: 24px; font-weight: bold; background: #FF4500; color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 69, 0, 0.6); margin-top: 20px; }
 
-/* NÚT TƯƠNG TÁC */
-.ui-btn { position: fixed; width: 50px; height: 50px; background: white; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 24px; font-weight: bold; z-index: 1000; cursor: pointer; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-#info-btn { top: 20px; right: 20px; }
-#audio-btn { top: 80px; right: 20px; font-size: 20px;}
+/* 2 NÚT CỐ ĐỊNH */
+.ui-btn { position: fixed; width: 50px; height: 50px; background: white; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-weight: bold; z-index: 1000; cursor: pointer; display: none; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+#info-btn { top: 20px; right: 20px; font-size: 24px; }
+#audio-btn { top: 80px; right: 20px; font-size: 20px; }
 
-/* BẢNG THÔNG TIN CÓ NÚT ĐÓNG */
-#info-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; justify-content: center; align-items: center; }
-.modal-wrapper { position: relative; max-width: 95%; max-height: 85%; }
-#info-content { width: 100%; height: auto; border-radius: 10px; border: 2px solid white; object-fit: contain; }
-.close-btn { position: absolute; top: -15px; right: -15px; width: 40px; height: 40px; border-radius: 50%; background: #d32f2f; color: white; font-weight: bold; font-size: 18px; border: 2px solid white; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-
-/* POPUP DỮ LIỆU CHƯA CẬP NHẬT */
-#custom-alert { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10002; justify-content: center; align-items: center; }
-.alert-box { background: white; padding: 25px 30px; border-radius: 10px; text-align: center; color: #8B4513; font-weight: bold; font-size: 18px; border: 3px solid #8B4513; display: flex; flex-direction: column; gap: 20px; position: relative; }
-.alert-close-btn { padding: 10px 20px; background: #d32f2f; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; }
-
-/* MENU THẺ SỐ 6 VÀ QUAY LẠI */
+/* MENU THẺ SỐ 6 */
 #menu-phunam10 { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); gap: 15px; z-index: 2000; flex-direction: row; }
 .num-btn { width: 45px; height: 45px; background: #fff59d; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-#back-btn { display: none; position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 10px 25px; background: #d32f2f; color: white; border-radius: 20px; border: 2px solid white; font-weight: bold; z-index: 2000; cursor: pointer; }
+#back-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 10px 25px; background: #d32f2f; color: white; border-radius: 20px; border: 2px solid white; font-weight: bold; display: none; z-index: 2000; cursor: pointer; }
 
-.mindar-ui-overlay { display: none !important; }
-.mindar-ui-loading { display: none !important; }
-.mindar-ui-scanning { display: none !important; }
+/* POPUP THÔNG TIN VÀ CẢNH BÁO */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; justify-content: center; align-items: center; flex-direction: column; }
+.modal-content { max-width: 95%; max-height: 70%; border-radius: 10px; border: 2px solid white; object-fit: contain; }
+.close-btn { margin-top: 15px; padding: 10px 30px; background: #d32f2f; color: white; border: none; border-radius: 20px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.alert-box { background: white; padding: 25px 30px; border-radius: 10px; text-align: center; color: #8B4513; font-weight: bold; font-size: 18px; border: 3px solid #8B4513; display: flex; flex-direction: column; gap: 20px; }
+
+.mindar-ui-overlay, .mindar-ui-loading, .mindar-ui-scanning { display: none !important; }
 </style>
 </head>
 
 <body>
 <div id="start-screen">
-    <div style="font-size: 16px; color: #ccc; margin-bottom: 15px; text-align:center;">Đang tải dữ liệu mô hình...<br>Vui lòng đợi giây lát!</div>
-    <div id="progress-text" style="font-size: 22px; color: #FFD700; font-weight: bold;">0%</div>
+    <div id="loading-container">
+        <div class="loading-text">Đang tải dữ liệu AR...<br>Bạn đợi chút xíu nhé!</div>
+        <div class="progress-box"><div id="progress-bar"></div></div>
+        <div id="progress-percentage">0%</div>
+    </div>
     <button id="start-btn">SẴN SÀNG</button>
 </div>
 
-<!-- ĐẾM PHẦN TRĂM -->
-<script>
-let loadProgress = 0;
-let pt = document.getElementById('progress-text');
-let progressInterval = setInterval(() => {
-    loadProgress += Math.floor(Math.random() * 6) + 2; 
-    if (loadProgress >= 95) loadProgress = 95; 
-    if (pt) pt.innerText = loadProgress + '%';
-}, 300);
-</script>
+<!-- NÚT UI CHÍNH -->
+<div id="info-btn" class="ui-btn" onclick="showInfo()">ℹ️</div>
+<div id="audio-btn" class="ui-btn" onclick="toggleAudio()">🔊</div>
 
-<div id="info-btn" class="ui-btn">ℹ️</div>
-<div id="audio-btn" class="ui-btn">🔊</div>
-
+<!-- NÚT MENU HÌNH 6 -->
 <div id="menu-phunam10">
-    <div class="num-btn" id="btn-sub-a">1</div>
-    <div class="num-btn" id="btn-sub-b">2</div>
-    <div class="num-btn" id="btn-sub-c">3</div>
-    <div class="num-btn" id="btn-sub-d">4</div>
+    <div class="num-btn" onclick="selectSubModel('a')">1</div>
+    <div class="num-btn" onclick="selectSubModel('b')">2</div>
+    <div class="num-btn" onclick="selectSubModel('c')">3</div>
+    <div class="num-btn" onclick="selectSubModel('d')">4</div>
 </div>
-<button id="back-btn">QUAY LẠI VIDEO</button>
+<button id="back-btn" onclick="goBackToVideo()">QUAY LẠI VIDEO</button>
 
-<div id="info-modal">
-    <div class="modal-wrapper">
-        <img id="info-content" src="" alt="Thông tin">
-        <button class="close-btn" id="close-info-btn">✕</button>
-    </div>
+<!-- POPUPS -->
+<div id="info-modal" class="modal">
+    <img id="info-image" class="modal-content" src="" alt="Thông tin">
+    <button class="close-btn" onclick="closeInfo()">ĐÓNG (✕)</button>
 </div>
 
-<div id="custom-alert">
+<div id="alert-modal" class="modal">
     <div class="alert-box">
         <div>Dữ liệu chưa cập nhật</div>
-        <button class="alert-close-btn" id="close-alert-btn">ĐÓNG (✕)</button>
+        <button class="close-btn" onclick="closeAlert()" style="margin-top: 0;">ĐÓNG (✕)</button>
     </div>
 </div>
 
-<!-- HỆ THỐNG AR VÀ TẢI TRƯỚC (PRELOAD) GIỐNG Y HỆT BÀI ĐẠI VIỆT -->
+<!-- MEDIA CHẠY NGẦM -->
+<video id="main-video" crossorigin="anonymous" loop playsinline webkit-playsinline muted style="display:none;"></video>
+<audio id="main-audio" style="display:none;"></audio>
+
 <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; filterMinCF:0.001; filterBeta: 10;"
 color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights"
 vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
 gesture-detector>
-
-<a-assets timeout="40000">
-    <!-- KHAI BÁO TẤT CẢ FILE 3D Ở ĐÂY LÀ CHẮC CHẮN HIỆN -->
-    <a-asset-item id="m-champa10" src="./champa10.glb"></a-asset-item>
-    <a-asset-item id="m-champa11" src="./champa11.glb"></a-asset-item>
-    <a-asset-item id="m-champa13" src="./champa13.glb"></a-asset-item>
-    <a-asset-item id="m-phunam8" src="./phunam8.glb"></a-asset-item>
-    <a-asset-item id="m-phunam9" src="./phunam9.glb"></a-asset-item>
-    <a-asset-item id="m-phunam10a" src="./phunam10a.glb"></a-asset-item>
-    <a-asset-item id="m-phunam10b" src="./phunam10b.glb"></a-asset-item>
-    <a-asset-item id="m-phunam10c" src="./phunam10c.glb"></a-asset-item>
-    <a-asset-item id="m-phunam10d" src="./phunam10d.glb"></a-asset-item>
-    <a-asset-item id="m-vanlang8" src="./vanlang8.glb"></a-asset-item>
     
-    <!-- VIDEO VÀ AUDIO -->
-    <video id="v-phunam10" src="./phunam10.mp4" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="none"></video>
-    <video id="v-phunam11" src="./phunam11.mp4" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="none"></video>
-    <audio id="a-vanlang8" src="./vanlang8.mp3" preload="none"></audio>
-</a-assets>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-<!-- Hình 1 -->
-<a-entity id="t0" mindar-image-target="targetIndex: 0"><a-entity id="model-0" gltf-model="#m-champa10" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<!-- Hình 2 -->
-<a-entity id="t1" mindar-image-target="targetIndex: 1"><a-entity id="model-1" gltf-model="#m-champa11" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<!-- Hình 3 -->
-<a-entity id="t2" mindar-image-target="targetIndex: 2"><a-entity id="model-2" gltf-model="#m-champa13" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<!-- Hình 4 -->
-<a-entity id="t3" mindar-image-target="targetIndex: 3"><a-entity id="model-3" gltf-model="#m-phunam8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<!-- Hình 5 -->
-<a-entity id="t4" mindar-image-target="targetIndex: 4"><a-entity id="model-4" gltf-model="#m-phunam9" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-<!-- Hình 6 -->
-<a-entity id="t5" mindar-image-target="targetIndex: 5">
-    <a-plane id="video-5" blue-chromakey="src: #v-phunam10; color: 0 1 0" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-plane>
-    <a-entity id="model-5a" gltf-model="#m-phunam10a" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-entity id="model-5b" gltf-model="#m-phunam10b" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-entity id="model-5c" gltf-model="#m-phunam10c" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    <a-entity id="model-5d" gltf-model="#m-phunam10d" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-</a-entity>
-<!-- Hình 7 -->
-<a-entity id="t6" mindar-image-target="targetIndex: 6">
-    <a-plane id="video-6" blue-chromakey="src: #v-phunam11; color: 0 1 0" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-plane>
-</a-entity>
-<!-- Hình 8 -->
-<a-entity id="t7" mindar-image-target="targetIndex: 7"><a-entity id="model-7" gltf-model="#m-vanlang8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+    <!-- CÁC THỰC THỂ SẼ ĐƯỢC LOAD ĐỘNG BẰNG JS ĐỂ TIẾT KIỆM RAM -->
+    <a-entity id="t0" mindar-image-target="targetIndex: 0"><a-entity id="model-0" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer></a-entity></a-entity>
+    <a-entity id="t1" mindar-image-target="targetIndex: 1"><a-entity id="model-1" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer></a-entity></a-entity>
+    <a-entity id="t2" mindar-image-target="targetIndex: 2"><a-entity id="model-2" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer></a-entity></a-entity>
+    <a-entity id="t3" mindar-image-target="targetIndex: 3"><a-entity id="model-3" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer></a-entity></a-entity>
+    <a-entity id="t4" mindar-image-target="targetIndex: 4"><a-entity id="model-4" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer></a-entity></a-entity>
+    
+    <a-entity id="t5" mindar-image-target="targetIndex: 5">
+        <a-video id="video-5" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-video>
+        <a-entity id="sub-model-5" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    </a-entity>
+    
+    <a-entity id="t6" mindar-image-target="targetIndex: 6">
+        <a-video id="video-6" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-video>
+    </a-entity>
+    
+    <a-entity id="t7" mindar-image-target="targetIndex: 7"><a-entity id="model-7" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer></a-entity></a-entity>
 
 </a-scene>
 
 <script>
-// Tắt màn hình chờ khi tải xong
+// THANH CHẠY TIẾN ĐỘ
+let loadProgress = 0;
+let progressInterval = setInterval(() => {
+    loadProgress += Math.floor(Math.random() * 6) + 2; 
+    if (loadProgress >= 95) loadProgress = 95; 
+    document.getElementById('progress-bar').style.width = loadProgress + '%';
+    document.getElementById('progress-percentage').innerText = loadProgress + '%';
+}, 300);
+
 const sceneEl = document.querySelector('a-scene');
 function finishLoading() {
     clearInterval(progressInterval);
-    if (pt) pt.style.display = 'none';
-    document.getElementById('start-btn').style.display = 'block';
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('progress-percentage').innerText = '100%';
+    setTimeout(() => {
+        document.getElementById('loading-container').style.display = 'none';
+        document.getElementById('start-btn').style.display = 'block';
+    }, 400);
 }
 if (sceneEl.hasLoaded) finishLoading();
 else sceneEl.addEventListener('loaded', finishLoading);
 
-const startScreen = document.getElementById('start-screen');
-const infoBtn = document.getElementById('info-btn');
-const audioBtn = document.getElementById('audio-btn');
-const menuPhunam10 = document.getElementById('menu-phunam10');
-const backBtn = document.getElementById('back-btn');
-const infoModal = document.getElementById('info-modal');
-const alertModal = document.getElementById('custom-alert');
+document.getElementById('start-btn').addEventListener('click', () => {
+    document.getElementById('start-screen').style.display = 'none';
+});
 
+// THÔNG TIN BỘ THẺ
 const cardConfig = [
-    { type: 'model', id: 'champa10', hasAudio: false },
-    { type: 'model', id: 'champa11', hasAudio: false },
-    { type: 'model', id: 'champa13', hasAudio: false },
-    { type: 'model', id: 'phunam8', hasAudio: false },
-    { type: 'model', id: 'phunam9', hasAudio: false },
-    { type: 'mixed', id: 'phunam10', hasAudio: false }, 
-    { type: 'video', id: 'phunam11', hasAudio: false },
-    { type: 'model', id: 'vanlang8', hasAudio: true } 
+    { type: 'model', id: 'champa10', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'champa11', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'champa13', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'phunam8', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'phunam9', hasInfo: true, hasAudio: false },
+    { type: 'mixed', id: 'phunam10', hasInfo: true, hasAudio: false }, 
+    { type: 'video', id: 'phunam11', hasInfo: true, hasAudio: false },
+    { type: 'model', id: 'vanlang8', hasInfo: true, hasAudio: true } 
 ];
 
 let activeIdx = -1; 
 let isAudioPlaying = false;
-let currentVideo = null;
-let currentAudio = null;
+let currentVideoEl = null;
+const mainVideo = document.getElementById('main-video');
+const mainAudio = document.getElementById('main-audio');
 
-document.getElementById('start-btn').addEventListener('click', () => {
-    startScreen.style.display = 'none';
-});
-
-// Hàm Dọn Dẹp
+// HÀM RESET DỌN DẸP SẠCH SẼ KHI MẤT MARKER
 function resetAll() {
-    if (currentVideo) {
-        currentVideo.pause();
-        currentVideo = null;
+    if (currentVideoEl) {
+        currentVideoEl.pause();
+        currentVideoEl.currentTime = 0;
+        currentVideoEl = null;
     }
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        currentAudio = null;
-    }
+    mainAudio.pause();
+    mainAudio.currentTime = 0;
     isAudioPlaying = false;
-    audioBtn.innerText = '🔊';
+    document.getElementById('audio-btn').innerText = '🔊';
     
-    infoBtn.style.display = 'none';
-    audioBtn.style.display = 'none';
-    menuPhunam10.style.display = 'none';
-    backBtn.style.display = 'none';
-    infoModal.style.display = 'none';
-    alertModal.style.display = 'none';
+    // Ẩn tất cả UI và Popups
+    document.getElementById('info-btn').style.display = 'none';
+    document.getElementById('audio-btn').style.display = 'none';
+    document.getElementById('menu-phunam10').style.display = 'none';
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('info-modal').style.display = 'none';
+    document.getElementById('alert-modal').style.display = 'none';
 
-    // Ẩn tất cả model/video
+    // Tháo gỡ Model & Ẩn Video
     for (let j = 0; j < 8; j++) {
         let m = document.getElementById(`model-${j}`);
-        if (m) m.setAttribute('visible', 'false');
+        if (m) m.removeAttribute('gltf-model');
         let v = document.getElementById(`video-${j}`);
         if (v) v.setAttribute('visible', 'false');
     }
-    ['a', 'b', 'c', 'd'].forEach(char => {
-        let sm = document.getElementById(`model-5${char}`);
-        if (sm) sm.setAttribute('visible', 'false');
-    });
+    let subM = document.getElementById('sub-model-5');
+    if (subM) {
+        subM.removeAttribute('gltf-model');
+        subM.setAttribute('visible', 'false');
+    }
 }
 
-// Lắng nghe quét thẻ
+// BẮT SỰ KIỆN QUÉT ẢNH
 for (let i = 0; i < 8; i++) {
     const entity = document.getElementById(`t${i}`);
     if (!entity) continue;
 
     entity.addEventListener('targetFound', () => {
-        if (activeIdx !== i) { resetAll(); }
+        if (activeIdx !== i) resetAll();
         activeIdx = i;
         
-        infoBtn.style.display = 'flex';
-        audioBtn.style.display = 'flex';
+        document.getElementById('info-btn').style.display = 'flex';
+        document.getElementById('audio-btn').style.display = 'flex';
 
         let conf = cardConfig[i];
 
-        if (conf.hasAudio) {
-            currentAudio = document.getElementById(`a-${conf.id}`);
-        }
-
         if (conf.type === 'model') {
-            document.getElementById(`model-${i}`).setAttribute('visible', 'true');
+            document.getElementById(`model-${i}`).setAttribute('gltf-model', `url(./${conf.id}.glb)`);
         } 
         else if (conf.type === 'video') {
-            document.getElementById(`video-${i}`).setAttribute('visible', 'true');
-            currentVideo = document.getElementById(`v-${conf.id}`);
-            currentVideo.muted = !isAudioPlaying; 
-            currentVideo.play().catch(()=>{});
+            let vPlane = document.getElementById(`video-${i}`);
+            vPlane.setAttribute('src', '#main-video');
+            vPlane.setAttribute('visible', 'true');
+            
+            mainVideo.src = `./${conf.id}.mp4`;
+            mainVideo.muted = !isAudioPlaying; 
+            mainVideo.play().catch(()=>{});
+            currentVideoEl = mainVideo;
         }
         else if (conf.type === 'mixed') {
-            document.getElementById(`video-${i}`).setAttribute('visible', 'true');
-            currentVideo = document.getElementById(`v-${conf.id}`);
-            currentVideo.muted = !isAudioPlaying; 
-            currentVideo.play().catch(()=>{});
-            menuPhunam10.style.display = 'flex';
+            let vPlane = document.getElementById(`video-${i}`);
+            vPlane.setAttribute('src', '#main-video');
+            vPlane.setAttribute('visible', 'true');
+            
+            mainVideo.src = `./${conf.id}.mp4`;
+            mainVideo.muted = !isAudioPlaying; 
+            mainVideo.play().catch(()=>{});
+            currentVideoEl = mainVideo;
+            
+            document.getElementById('menu-phunam10').style.display = 'flex';
         }
     });
 
@@ -370,81 +305,81 @@ for (let i = 0; i < 8; i++) {
     });
 }
 
-// Bấm nút Thông tin
-infoBtn.addEventListener('click', () => {
+// LỆNH NÚT THÔNG TIN
+function showInfo() {
     if (activeIdx === -1) return;
     let conf = cardConfig[activeIdx];
     
-    // Đã gán toàn bộ thẻ đều có hình tt[tên].png
-    document.getElementById('info-content').src = `./tt${conf.id}.png`;
-    infoModal.style.display = 'flex';
-    
-    if (currentVideo) currentVideo.pause();
-    if (currentAudio && isAudioPlaying) currentAudio.pause();
-});
+    if (conf.hasInfo) {
+        document.getElementById('info-image').src = `./tt${conf.id}.png`;
+        document.getElementById('info-modal').style.display = 'flex';
+        if (currentVideoEl) currentVideoEl.pause();
+        if (isAudioPlaying) mainAudio.pause();
+    } else {
+        document.getElementById('alert-modal').style.display = 'flex';
+    }
+}
 
-// Bấm nút Đóng thông tin
-document.getElementById('close-info-btn').addEventListener('click', () => {
-    infoModal.style.display = 'none';
-    if (currentVideo) currentVideo.play().catch(()=>{});
-    if (currentAudio && isAudioPlaying) currentAudio.play().catch(()=>{});
-});
+function closeInfo() {
+    document.getElementById('info-modal').style.display = 'none';
+    if (isAudioPlaying) mainAudio.play().catch(()=>{});
+    if (currentVideoEl) currentVideoEl.play().catch(()=>{});
+}
 
-// Bấm nút Âm thanh
-audioBtn.addEventListener('click', () => {
+// LỆNH NÚT ÂM THANH
+function toggleAudio() {
     if (activeIdx === -1) return;
     let conf = cardConfig[activeIdx];
     
     if (!conf.hasAudio) {
-        alertModal.style.display = 'flex';
+        document.getElementById('alert-modal').style.display = 'flex';
         return;
     }
 
     isAudioPlaying = !isAudioPlaying;
-    audioBtn.innerText = isAudioPlaying ? '🎵' : '🔊';
+    document.getElementById('audio-btn').innerText = isAudioPlaying ? '🎵' : '🔊';
+
+    if (!mainAudio.src.includes(conf.id + '.mp3')) {
+        mainAudio.src = `./${conf.id}.mp3`;
+    }
 
     if (isAudioPlaying) {
-        if (currentAudio) currentAudio.play().catch(()=>{});
-        if (currentVideo) currentVideo.muted = false;
+        mainAudio.play().catch(()=>{});
+        if (currentVideoEl) currentVideoEl.muted = false;
     } else {
-        if (currentAudio) currentAudio.pause();
-        if (currentVideo) currentVideo.muted = true;
+        mainAudio.pause();
+        if (currentVideoEl) currentVideoEl.muted = true;
     }
-});
+}
 
-// Bấm nút Đóng cảnh báo
-document.getElementById('close-alert-btn').addEventListener('click', () => {
-    alertModal.style.display = 'none';
-});
+function closeAlert() {
+    document.getElementById('alert-modal').style.display = 'none';
+}
 
-// Nút chọn mô hình cho thẻ số 6
-['a', 'b', 'c', 'd'].forEach(char => {
-    document.getElementById(`btn-sub-${char}`).addEventListener('click', () => {
-        if (currentVideo) currentVideo.pause();
-        document.getElementById('video-5').setAttribute('visible', 'false');
-        
-        ['a', 'b', 'c', 'd'].forEach(c => {
-            document.getElementById(`model-5${c}`).setAttribute('visible', 'false');
-        });
-        document.getElementById(`model-5${char}`).setAttribute('visible', 'true');
-        
-        menuPhunam10.style.display = 'none';
-        backBtn.style.display = 'block';
-    });
-});
+// NÚT 1-2-3-4 THẺ SỐ 6
+window.selectSubModel = function(suffix) {
+    if (currentVideoEl) currentVideoEl.pause();
+    document.getElementById('video-5').setAttribute('visible', 'false');
+    
+    let subModel = document.getElementById('sub-model-5');
+    subModel.setAttribute('gltf-model', `url(./phunam10${suffix}.glb)`);
+    subModel.setAttribute('visible', 'true');
+    
+    document.getElementById('menu-phunam10').style.display = 'none';
+    document.getElementById('back-btn').style.display = 'block';
+}
 
-// Nút quay lại cho thẻ số 6
-backBtn.addEventListener('click', () => {
-    ['a', 'b', 'c', 'd'].forEach(c => {
-        document.getElementById(`model-5${c}`).setAttribute('visible', 'false');
-    });
+window.goBackToVideo = function() {
+    let subModel = document.getElementById('sub-model-5');
+    subModel.removeAttribute('gltf-model');
+    subModel.setAttribute('visible', 'false');
     
     document.getElementById('video-5').setAttribute('visible', 'true');
-    if (currentVideo) currentVideo.play().catch(()=>{});
+    if (currentVideoEl) currentVideoEl.play().catch(()=>{});
     
-    backBtn.style.display = 'none';
-    menuPhunam10.style.display = 'flex';
-});
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('menu-phunam10').style.display = 'flex';
+}
 </script>
 </body>
 </html>
