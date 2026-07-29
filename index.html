@@ -2,12 +2,13 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
-<title>AR Cham Pa Phu Nam</title>
+<title>AR Chăm Pa - Phù Nam</title>
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
 
 <script>
+// CẢM ỨNG XOAY ĐA CHIỀU
 AFRAME.registerComponent('gesture-handler', {
 schema: { enabled: { default: true }, rotationFactor: { default: 5 }, minScale: { default: 0.1 }, maxScale: { default: 8 } },
 init: function () {
@@ -16,12 +17,8 @@ this.handleRotation = this.handleRotation.bind(this);
 this.isVisible = false;
 this.initialScale = this.el.object3D.scale.clone();
 this.scaleFactor = 1;
-
-const targetEl = this.el.closest('[mindar-image-target]');
-if (targetEl) {
-    targetEl.addEventListener("targetFound", () => { this.isVisible = true; });
-    targetEl.addEventListener("targetLost", () => { this.isVisible = false; });
-}
+this.el.sceneEl.addEventListener("markerFound", (e) => { this.isVisible = true; });
+this.el.sceneEl.addEventListener("markerLost", (e) => { this.isVisible = false; });
 },
 update: function () {
 this.el.sceneEl.addEventListener("onefingermove", this.handleRotation);
@@ -54,14 +51,14 @@ this.startSpread = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, e
 }
 if(event.touches.length === 1) {
 this.lastX = event.touches[0].clientX;
-this.lastY = event.touches[0].clientY; 
+this.lastY = event.touches[0].clientY;
 }
 });
 this.el.addEventListener('touchmove', (event) => {
 if (event.touches.length === 1) {
 const touch = event.touches[0];
 const movementX = touch.clientX - (this.lastX || touch.clientX);
-const movementY = touch.clientY - (this.lastY || touch.clientY); 
+const movementY = touch.clientY - (this.lastY || touch.clientY);
 this.lastX = touch.clientX;
 this.lastY = touch.clientY;
 this.el.emit('onefingermove', { positionChange: { x: movementX / 100, y: movementY / 100 } });
@@ -76,6 +73,7 @@ this.startSpread = spread;
 }
 });
 
+// TÁCH NỀN VIDEO (ĐÃ SỬA LỖI NỀN ĐEN)
 AFRAME.registerComponent('blue-chromakey', {
 schema: {
 src: {type: 'selector'},
@@ -111,13 +109,7 @@ gl_FragColor = vec4(texColor.rgb, texColor.a * alpha);
 `,
 transparent: true, side: THREE.DoubleSide, depthTest: false
 });
-
-const applyMaterial = () => {
-    const mesh = this.el.getObject3D('mesh');
-    if (mesh) mesh.material = this.material;
-};
-if (this.el.hasLoaded) applyMaterial();
-else this.el.addEventListener('loaded', applyMaterial);
+this.el.getObject3D('mesh').material = this.material;
 },
 tick: function() { 
 let isVisible = this.el.object3D.visible;
@@ -135,7 +127,6 @@ body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none;
 
 #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
 #loading-container { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px; }
-.loading-text { font-size: 16px; margin-bottom: 20px; line-height: 1.6; color: #f8f9fa; font-style: italic; max-width: 85%; }
 .progress-box { width: 280px; height: 18px; background: rgba(255,255,255,0.2); border-radius: 20px; border: 2px solid #fff; overflow: hidden; position: relative; }
 #progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #FF8C00, #FFD700); transition: width 0.3s ease; }
 #progress-percentage { margin-top: 15px; font-weight: bold; font-size: 22px; color: #FFD700; }
@@ -148,13 +139,14 @@ body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none;
 
 #menu-phunam10 { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); gap: 15px; z-index: 2000; flex-direction: row; }
 .num-btn { width: 45px; height: 45px; background: #fff59d; border-radius: 50%; border: 3px solid #8B4513; color: #8B4513; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-.num-btn:active { transform: scale(0.95); box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 #back-btn { display: none; position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 10px 25px; background: #d32f2f; color: white; border-radius: 20px; border: 2px solid white; font-weight: bold; z-index: 2000; cursor: pointer; }
 
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10001; justify-content: center; align-items: center; flex-direction: column; }
-.modal-content { max-width: 95%; max-height: 75%; border-radius: 10px; border: 2px solid white; object-fit: contain; }
-.close-btn { margin-top: 15px; padding: 10px 30px; background: #d32f2f; color: white; border: none; border-radius: 20px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-.alert-box { background: white; padding: 25px 30px; border-radius: 10px; text-align: center; color: #8B4513; font-weight: bold; font-size: 18px; border: 3px solid #8B4513; display: flex; flex-direction: column; gap: 20px; }
+.modal-wrapper { position: relative; max-width: 95%; max-height: 85%; }
+#info-content { width: 100%; border-radius: 10px; border: 2px solid white; object-fit: contain; }
+.close-btn { position: absolute; top: -15px; right: -15px; width: 40px; height: 40px; border-radius: 50%; background: #d32f2f; color: white; font-weight: bold; font-size: 18px; border: 2px solid white; cursor: pointer; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.alert-box { background: white; padding: 25px 30px; border-radius: 10px; text-align: center; color: #8B4513; font-weight: bold; font-size: 18px; border: 3px solid #8B4513; display: flex; flex-direction: column; gap: 20px; position: relative; }
+.alert-close-btn { padding: 10px 20px; background: #d32f2f; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; }
 
 .mindar-ui-overlay, .mindar-ui-loading, .mindar-ui-scanning { display: none !important; }
 </style>
@@ -163,7 +155,7 @@ body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none;
 <body>
 <div id="start-screen">
     <div id="loading-container">
-        <div class="loading-text">Đang tải dữ liệu AR...<br>Bạn đợi chút xíu nhé</div>
+        <div style="font-size: 16px; color: #ccc; margin-bottom: 15px; text-align:center;">Đang tải dữ liệu mô hình...<br>Vui lòng đợi giây lát!</div>
         <div class="progress-box"><div id="progress-bar"></div></div>
         <div id="progress-percentage">0%</div>
     </div>
@@ -172,139 +164,156 @@ body { margin: 0; overflow: hidden; font-family: sans-serif; touch-action: none;
 
 <script>
 let loadProgress = 0;
-let pb = document.getElementById('progress-bar');
-let pt = document.getElementById('progress-percentage');
 let progressInterval = setInterval(() => {
     loadProgress += Math.floor(Math.random() * 6) + 2; 
     if (loadProgress >= 95) loadProgress = 95; 
-    if (pb) pb.style.width = loadProgress + '%';
-    if (pt) pt.innerText = loadProgress + '%';
-}, 200);
+    document.getElementById('progress-bar').style.width = loadProgress + '%';
+    document.getElementById('progress-percentage').innerText = loadProgress + '%';
+}, 300);
 </script>
 
 <div id="info-btn" class="ui-btn" onclick="showInfo()">ℹ️</div>
 <div id="audio-btn" class="ui-btn" onclick="toggleAudio()">🔊</div>
 
 <div id="menu-phunam10">
-    <div class="num-btn" onclick="selectSubModel('a')">1</div>
-    <div class="num-btn" onclick="selectSubModel('b')">2</div>
-    <div class="num-btn" onclick="selectSubModel('c')">3</div>
-    <div class="num-btn" onclick="selectSubModel('d')">4</div>
+    <div class="num-btn" id="btn-sub-a">1</div>
+    <div class="num-btn" id="btn-sub-b">2</div>
+    <div class="num-btn" id="btn-sub-c">3</div>
+    <div class="num-btn" id="btn-sub-d">4</div>
 </div>
-<button id="back-btn" onclick="goBackToVideo()">QUAY LẠI VIDEO</button>
+<button id="back-btn">QUAY LẠI VIDEO</button>
 
 <div id="info-modal" class="modal">
-    <img id="info-image" class="modal-content" src="" alt="Thong tin">
-    <button class="close-btn" onclick="closeInfo()">ĐÓNG ✕</button>
-</div>
-
-<div id="alert-modal" class="modal">
-    <div class="alert-box">
-        <div>Dữ liệu chưa cập nhật</div>
-        <button class="close-btn" onclick="closeAlert()" style="margin-top: 0;">ĐÓNG ✕</button>
+    <div class="modal-wrapper">
+        <img id="info-content" src="" alt="Thông tin">
+        <button class="close-btn" id="close-info-btn">✕</button>
     </div>
 </div>
 
+<div id="custom-alert" class="modal">
+    <div class="alert-box">
+        <div>Dữ liệu chưa cập nhật</div>
+        <button class="alert-close-btn" id="close-alert-btn">ĐÓNG (✕)</button>
+    </div>
+</div>
+
+<!-- ĐÃ BỔ SUNG ĐÈN (LIGHTS) ĐỂ MÔ HÌNH KHÔNG BỊ ĐEN -->
 <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiScanning: no; filterMinCF:0.001; filterBeta: 10;"
-color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights"
+color-space="sRGB" renderer="colorManagement: true"
 vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"
 gesture-detector>
-    
-    <a-assets timeout="40000">
-        <a-asset-item id="m-champa10" src="./champa10.glb"></a-asset-item>
-        <a-asset-item id="m-champa11" src="./champa11.glb"></a-asset-item>
-        <a-asset-item id="m-champa13" src="./champa13.glb"></a-asset-item>
-        <a-asset-item id="m-phunam8" src="./phunam8.glb"></a-asset-item>
-        <a-asset-item id="m-phunam9" src="./phunam9.glb"></a-asset-item>
-        <a-asset-item id="m-phunam10a" src="./phunam10a.glb"></a-asset-item>
-        <a-asset-item id="m-phunam10b" src="./phunam10b.glb"></a-asset-item>
-        <a-asset-item id="m-phunam10c" src="./phunam10c.glb"></a-asset-item>
-        <a-asset-item id="m-phunam10d" src="./phunam10d.glb"></a-asset-item>
-        <a-asset-item id="m-vanlang8" src="./vanlang8.glb"></a-asset-item>
-        
-        <video id="v-phunam10" src="./phunam10.mp4" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="none"></video>
-        <video id="v-phunam11" src="./phunam11.mp4" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="none"></video>
-        <audio id="a-vanlang8" src="./vanlang8.mp3" preload="none"></audio>
-    </a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<a-light type="ambient" color="#ffffff" intensity="1.5"></a-light>
+<a-light type="directional" color="#ffffff" intensity="0.8" position="1 2 1"></a-light>
 
-    <a-entity id="t0" mindar-image-target="targetIndex: 0"><a-entity id="model-0" gltf-model="#m-champa10" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-    <a-entity id="t1" mindar-image-target="targetIndex: 1"><a-entity id="model-1" gltf-model="#m-champa11" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-    <a-entity id="t2" mindar-image-target="targetIndex: 2"><a-entity id="model-2" gltf-model="#m-champa13" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-    <a-entity id="t3" mindar-image-target="targetIndex: 3"><a-entity id="model-3" gltf-model="#m-phunam8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
-    <a-entity id="t4" mindar-image-target="targetIndex: 4"><a-entity id="model-4" gltf-model="#m-phunam9" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<a-assets timeout="60000">
+    <a-asset-item id="m-champa10" src="./champa10.glb"></a-asset-item>
+    <a-asset-item id="m-champa11" src="./champa11.glb"></a-asset-item>
+    <a-asset-item id="m-champa13" src="./champa13.glb"></a-asset-item>
+    <a-asset-item id="m-phunam8" src="./phunam8.glb"></a-asset-item>
+    <a-asset-item id="m-phunam9" src="./phunam9.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10a" src="./phunam10a.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10b" src="./phunam10b.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10c" src="./phunam10c.glb"></a-asset-item>
+    <a-asset-item id="m-phunam10d" src="./phunam10d.glb"></a-asset-item>
+    <a-asset-item id="m-vanlang8" src="./vanlang8.glb"></a-asset-item>
     
-    <a-entity id="t5" mindar-image-target="targetIndex: 5">
-        <a-plane id="video-5" blue-chromakey="src: #v-phunam10; color: 0 1 0" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-plane>
-        <a-entity id="model-5a" gltf-model="#m-phunam10a" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-        <a-entity id="model-5b" gltf-model="#m-phunam10b" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-        <a-entity id="model-5c" gltf-model="#m-phunam10c" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-        <a-entity id="model-5d" gltf-model="#m-phunam10d" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
-    </a-entity>
-    
-    <a-entity id="t6" mindar-image-target="targetIndex: 6">
-        <a-plane id="video-6" blue-chromakey="src: #v-phunam11; color: 0 1 0" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-plane>
-    </a-entity>
-    
-    <a-entity id="t7" mindar-image-target="targetIndex: 7"><a-entity id="model-7" gltf-model="#m-vanlang8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+    <video id="v-phunam10" src="./phunam10.mp4" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="auto"></video>
+    <video id="v-phunam11" src="./phunam11.mp4" crossorigin="anonymous" loop playsinline webkit-playsinline muted preload="auto"></video>
+    <audio id="a-vanlang8" src="./vanlang8.mp3" preload="auto"></audio>
+</a-assets>
+
+<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+<a-entity id="t0" mindar-image-target="targetIndex: 0"><a-entity id="model-0" gltf-model="#m-champa10" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<a-entity id="t1" mindar-image-target="targetIndex: 1"><a-entity id="model-1" gltf-model="#m-champa11" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<a-entity id="t2" mindar-image-target="targetIndex: 2"><a-entity id="model-2" gltf-model="#m-champa13" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<a-entity id="t3" mindar-image-target="targetIndex: 3"><a-entity id="model-3" gltf-model="#m-phunam8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+<a-entity id="t4" mindar-image-target="targetIndex: 4"><a-entity id="model-4" gltf-model="#m-phunam9" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+
+<a-entity id="t5" mindar-image-target="targetIndex: 5">
+    <a-plane id="video-5" blue-chromakey="src: #v-phunam10; color: 0 1 0" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-plane>
+    <a-entity id="model-5a" gltf-model="#m-phunam10a" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-entity id="model-5b" gltf-model="#m-phunam10b" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-entity id="model-5c" gltf-model="#m-phunam10c" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+    <a-entity id="model-5d" gltf-model="#m-phunam10d" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity>
+</a-entity>
+
+<a-entity id="t6" mindar-image-target="targetIndex: 6">
+    <a-plane id="video-6" blue-chromakey="src: #v-phunam11; color: 0 1 0" rotation="0 0 0" position="0 0 0" height="2" width="1.2" visible="false"></a-plane>
+</a-entity>
+
+<a-entity id="t7" mindar-image-target="targetIndex: 7"><a-entity id="model-7" gltf-model="#m-vanlang8" rotation="90 0 0" scale="1 1 1" gesture-handler animation-mixer visible="false"></a-entity></a-entity>
+
 </a-scene>
 
 <script>
+const sceneEl = document.querySelector('a-scene');
 function finishLoading() {
     clearInterval(progressInterval);
-    if (pb) pb.style.width = '100%';
-    if (pt) pt.innerText = '100%';
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('progress-percentage').innerText = '100%';
     setTimeout(() => {
         document.getElementById('loading-container').style.display = 'none';
         document.getElementById('start-btn').style.display = 'block';
     }, 400);
 }
-
-const sceneEl = document.querySelector('a-scene');
 if (sceneEl.hasLoaded) finishLoading();
 else sceneEl.addEventListener('loaded', finishLoading);
 
-document.getElementById('start-btn').addEventListener('click', () => {
-    document.getElementById('start-screen').style.display = 'none';
-});
+const startScreen = document.getElementById('start-screen');
+const infoBtn = document.getElementById('info-btn');
+const audioBtn = document.getElementById('audio-btn');
+const menuPhunam10 = document.getElementById('menu-phunam10');
+const backBtn = document.getElementById('back-btn');
+const infoModal = document.getElementById('info-modal');
+const alertModal = document.getElementById('custom-alert');
 
 const cardConfig = [
-    { type: 'model', id: 'champa10', hasInfo: true, hasAudio: false },
-    { type: 'model', id: 'champa11', hasInfo: true, hasAudio: false },
-    { type: 'model', id: 'champa13', hasInfo: true, hasAudio: false },
-    { type: 'model', id: 'phunam8', hasInfo: true, hasAudio: false },
-    { type: 'model', id: 'phunam9', hasInfo: true, hasAudio: false },
-    { type: 'mixed', id: 'phunam10', hasInfo: true, hasAudio: false }, 
-    { type: 'video', id: 'phunam11', hasInfo: true, hasAudio: false },
-    { type: 'model', id: 'vanlang8', hasInfo: true, hasAudio: true } 
+    { type: 'model', id: 'champa10', hasAudio: false },
+    { type: 'model', id: 'champa11', hasAudio: false },
+    { type: 'model', id: 'champa13', hasAudio: false },
+    { type: 'model', id: 'phunam8', hasAudio: false },
+    { type: 'model', id: 'phunam9', hasAudio: false },
+    { type: 'mixed', id: 'phunam10', hasAudio: false }, 
+    { type: 'video', id: 'phunam11', hasAudio: false },
+    { type: 'model', id: 'vanlang8', hasAudio: true } 
 ];
 
 let activeIdx = -1; 
 let isAudioPlaying = false;
-let currentVideoEl = null;
-let currentAudioEl = null;
+let currentVideo = null;
+let currentAudio = null;
+
+document.getElementById('start-btn').addEventListener('click', () => {
+    startScreen.style.display = 'none';
+    
+    // Đánh thức video trên điện thoại
+    const v10 = document.getElementById('v-phunam10');
+    const v11 = document.getElementById('v-phunam11');
+    if (v10) { v10.play().catch(()=>{}); v10.pause(); }
+    if (v11) { v11.play().catch(()=>{}); v11.pause(); }
+});
 
 function resetAll() {
-    if (currentVideoEl) {
-        currentVideoEl.pause();
-        currentVideoEl.currentTime = 0;
-        currentVideoEl = null;
+    if (currentVideo) {
+        currentVideo.pause();
+        currentVideo = null;
     }
-    if (currentAudioEl) {
-        currentAudioEl.pause();
-        currentAudioEl.currentTime = 0;
-        currentAudioEl = null;
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
     }
     isAudioPlaying = false;
-    document.getElementById('audio-btn').innerText = '🔊';
+    audioBtn.innerText = '🔊';
     
-    document.getElementById('info-btn').style.display = 'none';
-    document.getElementById('audio-btn').style.display = 'none';
-    document.getElementById('menu-phunam10').style.display = 'none';
-    document.getElementById('back-btn').style.display = 'none';
-    document.getElementById('info-modal').style.display = 'none';
-    document.getElementById('alert-modal').style.display = 'none';
+    infoBtn.style.display = 'none';
+    audioBtn.style.display = 'none';
+    menuPhunam10.style.display = 'none';
+    backBtn.style.display = 'none';
+    infoModal.style.display = 'none';
+    alertModal.style.display = 'none';
 
     for (let j = 0; j < 8; j++) {
         let m = document.getElementById(`model-${j}`);
@@ -323,15 +332,16 @@ for (let i = 0; i < 8; i++) {
     if (!entity) continue;
 
     entity.addEventListener('targetFound', () => {
-        if (activeIdx !== i) resetAll();
+        if (activeIdx !== i) { resetAll(); }
         activeIdx = i;
         
-        document.getElementById('info-btn').style.display = 'flex';
-        document.getElementById('audio-btn').style.display = 'flex';
+        infoBtn.style.display = 'flex';
+        audioBtn.style.display = 'flex';
 
         let conf = cardConfig[i];
+
         if (conf.hasAudio) {
-            currentAudioEl = document.getElementById(`a-${conf.id}`);
+            currentAudio = document.getElementById(`a-${conf.id}`);
         }
 
         if (conf.type === 'model') {
@@ -339,17 +349,20 @@ for (let i = 0; i < 8; i++) {
         } 
         else if (conf.type === 'video') {
             document.getElementById(`video-${i}`).setAttribute('visible', 'true');
-            currentVideoEl = document.getElementById(`v-${conf.id}`);
-            currentVideoEl.muted = !isAudioPlaying; 
-            currentVideoEl.play().catch(()=>{});
+            currentVideo = document.getElementById(`v-${conf.id}`);
+            if (currentVideo) {
+                currentVideo.muted = !isAudioPlaying; 
+                currentVideo.play().catch(()=>{});
+            }
         }
         else if (conf.type === 'mixed') {
             document.getElementById(`video-${i}`).setAttribute('visible', 'true');
-            currentVideoEl = document.getElementById(`v-${conf.id}`);
-            currentVideoEl.muted = !isAudioPlaying; 
-            currentVideoEl.play().catch(()=>{});
-            
-            document.getElementById('menu-phunam10').style.display = 'flex';
+            currentVideo = document.getElementById(`v-${conf.id}`);
+            if (currentVideo) {
+                currentVideo.muted = !isAudioPlaying; 
+                currentVideo.play().catch(()=>{});
+            }
+            menuPhunam10.style.display = 'flex';
         }
     });
 
@@ -365,72 +378,70 @@ function showInfo() {
     if (activeIdx === -1) return;
     let conf = cardConfig[activeIdx];
     
-    if (conf.hasInfo) {
-        document.getElementById('info-image').src = `./tt${conf.id}.png`;
-        document.getElementById('info-modal').style.display = 'flex';
-        
-        if (currentVideoEl) currentVideoEl.pause();
-        if (currentAudioEl && isAudioPlaying) currentAudioEl.pause();
-    } else {
-        document.getElementById('alert-modal').style.display = 'flex';
-    }
+    document.getElementById('info-content').src = `./tt${conf.id}.png`;
+    infoModal.style.display = 'flex';
+    
+    if (currentVideo) currentVideo.pause();
+    if (currentAudio && isAudioPlaying) currentAudio.pause();
 }
 
-function closeInfo() {
-    document.getElementById('info-modal').style.display = 'none';
-    if (isAudioPlaying && currentAudioEl) currentAudioEl.play().catch(()=>{});
-    if (currentVideoEl) currentVideoEl.play().catch(()=>{});
-}
+document.getElementById('close-info-btn').addEventListener('click', () => {
+    infoModal.style.display = 'none';
+    if (currentVideo) currentVideo.play().catch(()=>{});
+    if (currentAudio && isAudioPlaying) currentAudio.play().catch(()=>{});
+});
 
 function toggleAudio() {
     if (activeIdx === -1) return;
     let conf = cardConfig[activeIdx];
     
     if (!conf.hasAudio) {
-        document.getElementById('alert-modal').style.display = 'flex';
+        alertModal.style.display = 'flex';
         return;
     }
 
     isAudioPlaying = !isAudioPlaying;
-    document.getElementById('audio-btn').innerText = isAudioPlaying ? '🎵' : '🔊';
+    audioBtn.innerText = isAudioPlaying ? '🎵' : '🔊';
 
     if (isAudioPlaying) {
-        if (currentAudioEl) currentAudioEl.play().catch(()=>{});
-        if (currentVideoEl) currentVideoEl.muted = false;
+        if (currentAudio) currentAudio.play().catch(()=>{});
+        if (currentVideo) currentVideo.muted = false;
     } else {
-        if (currentAudioEl) currentAudioEl.pause();
-        if (currentVideoEl) currentVideoEl.muted = true;
+        if (currentAudio) currentAudio.pause();
+        if (currentVideo) currentVideo.muted = true;
     }
 }
 
-function closeAlert() {
-    document.getElementById('alert-modal').style.display = 'none';
-}
+document.getElementById('close-alert-btn').addEventListener('click', () => {
+    alertModal.style.display = 'none';
+});
 
-window.selectSubModel = function(suffix) {
-    if (currentVideoEl) currentVideoEl.pause();
-    document.getElementById('video-5').setAttribute('visible', 'false');
-    
-    ['a', 'b', 'c', 'd'].forEach(c => {
-        document.getElementById(`model-5${c}`).setAttribute('visible', 'false');
+['a', 'b', 'c', 'd'].forEach(char => {
+    document.getElementById(`btn-sub-${char}`).addEventListener('click', () => {
+        if (currentVideo) currentVideo.pause();
+        document.getElementById('video-5').setAttribute('visible', 'false');
+        
+        ['a', 'b', 'c', 'd'].forEach(c => {
+            document.getElementById(`model-5${c}`).setAttribute('visible', 'false');
+        });
+        document.getElementById(`model-5${char}`).setAttribute('visible', 'true');
+        
+        menuPhunam10.style.display = 'none';
+        backBtn.style.display = 'block';
     });
-    document.getElementById(`model-5${suffix}`).setAttribute('visible', 'true');
-    
-    document.getElementById('menu-phunam10').style.display = 'none';
-    document.getElementById('back-btn').style.display = 'block';
-}
+});
 
-window.goBackToVideo = function() {
+backBtn.addEventListener('click', () => {
     ['a', 'b', 'c', 'd'].forEach(c => {
         document.getElementById(`model-5${c}`).setAttribute('visible', 'false');
     });
     
     document.getElementById('video-5').setAttribute('visible', 'true');
-    if (currentVideoEl) currentVideoEl.play().catch(()=>{});
+    if (currentVideo) currentVideo.play().catch(()=>{});
     
-    document.getElementById('back-btn').style.display = 'none';
-    document.getElementById('menu-phunam10').style.display = 'flex';
-}
+    backBtn.style.display = 'none';
+    menuPhunam10.style.display = 'flex';
+});
 </script>
 </body>
 </html>
